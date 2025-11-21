@@ -13,19 +13,26 @@ const gitStatsAPI = {
   },
 
   analyzeRepository: (repository: GitRepository): Promise<RepositoryAnalysis> => {
-    return ipcRenderer.invoke('git-stats:analyze-repository', repository)
+    return ipcRenderer.invoke(
+      'git-stats:analyze-repository',
+      JSON.parse(JSON.stringify(repository))
+    )
   },
 
   analyzeRepositories: (repositories: GitRepository[]): Promise<RepositoryAnalysis[]> => {
-    return ipcRenderer.invoke('git-stats:analyze-repositories', repositories)
+    return ipcRenderer.invoke(
+      'git-stats:analyze-repositories',
+      JSON.parse(JSON.stringify(repositories))
+    )
   },
 
   clearCache: (repoPath?: string): Promise<void> => {
     return ipcRenderer.invoke('git-stats:clear-cache', repoPath)
   },
 
-  onProgress: (callback: (progress: ProgressInfo) => void) => {
-    const handler = (_: any, progress: ProgressInfo) => callback(progress)
+  onProgress: (callback: (progress: ProgressInfo) => void): (() => void) => {
+    const handler = (_: Electron.IpcRendererEvent, progress: ProgressInfo): void =>
+      callback(progress)
     ipcRenderer.on('git-stats:progress', handler)
     return () => ipcRenderer.off('git-stats:progress', handler)
   }

@@ -44,7 +44,7 @@ export class GitScanner {
         cwd: repoPath,
         encoding: 'utf8'
       });
-      const authors = [...new Set(authorsOutput.trim().split('\n').filter(Boolean))];
+      const authors = [...new Set(authorsOutput.trim().split('\n').filter(Boolean))].map(author => String(author));
 
       return {
         name,

@@ -43,7 +43,8 @@ const selectRepository = async (repo: GitRepository) => {
   repositoryAnalysis.value = null
 
   try {
-    const analysis = await window.gitStats.analyzeRepository(repo)
+    const analysis = await window.gitStats.analyzeRepository(JSON.parse(JSON.stringify(repo)))
+    console.log('分析结果:', analysis)
     repositoryAnalysis.value = analysis
   } catch (error) {
     console.error('分析仓库失败:', error)
@@ -76,9 +77,7 @@ onUnmounted(() => {
         <button @click="selectDirectory" :disabled="isScanning" class="btn-primary">
           {{ isScanning ? '扫描中...' : '选择目录' }}
         </button>
-        <div v-if="selectedDirectory" class="selected-path">
-          当前目录: {{ selectedDirectory }}
-        </div>
+        <div v-if="selectedDirectory" class="selected-path">当前目录: {{ selectedDirectory }}</div>
       </div>
     </header>
 
@@ -109,7 +108,8 @@ onUnmounted(() => {
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
   background-color: #f6f8fa;
   color: #24292f;
   line-height: 1.5;
