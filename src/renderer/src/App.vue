@@ -13,7 +13,7 @@ const isScanning = ref(false)
 const progress = ref<ProgressInfo | null>(null)
 const progressCallback = ref<(() => void) | null>(null)
 
-const selectDirectory = async () => {
+const selectDirectory = async (): Promise<void> => {
   const path = await window.gitStats.selectDirectory()
   if (path) {
     selectedDirectory.value = path
@@ -21,7 +21,7 @@ const selectDirectory = async () => {
   }
 }
 
-const scanRepositories = async () => {
+const scanRepositories = async (): Promise<void> => {
   if (!selectedDirectory.value) return
 
   isScanning.value = true
@@ -38,7 +38,7 @@ const scanRepositories = async () => {
   }
 }
 
-const selectRepository = async (repo: GitRepository) => {
+const selectRepository = async (repo: GitRepository): Promise<void> => {
   selectedRepository.value = repo
   repositoryAnalysis.value = null
 
@@ -51,7 +51,7 @@ const selectRepository = async (repo: GitRepository) => {
   }
 }
 
-const backToList = () => {
+const backToList = (): void => {
   selectedRepository.value = null
   repositoryAnalysis.value = null
 }
@@ -74,7 +74,7 @@ onUnmounted(() => {
     <header class="header">
       <h1>📄 Git 多仓库可视化分析工具</h1>
       <div class="header-actions">
-        <button @click="selectDirectory" :disabled="isScanning" class="btn-primary">
+        <button :disabled="isScanning" class="btn-primary" @click="selectDirectory">
           {{ isScanning ? '扫描中...' : '选择目录' }}
         </button>
         <div v-if="selectedDirectory" class="selected-path">当前目录: {{ selectedDirectory }}</div>

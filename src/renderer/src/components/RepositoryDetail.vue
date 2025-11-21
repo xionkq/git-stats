@@ -1,7 +1,7 @@
 <template>
   <div class="repository-detail">
     <div class="detail-header">
-      <button @click="emit('back')" class="back-btn">← 返回列表</button>
+      <button class="back-btn" @click="emit('back')">← 返回列表</button>
       <h2>{{ repository?.name }}</h2>
     </div>
 
@@ -79,7 +79,7 @@ const dailyChartRef = ref<HTMLDivElement>()
 let authorChart: echarts.ECharts | null = null
 let dailyChart: echarts.ECharts | null = null
 
-const createAuthorChart = () => {
+const createAuthorChart = (): void => {
   if (!authorChartRef.value || !props.analysis) return
 
   if (authorChart) {
@@ -122,7 +122,7 @@ const createAuthorChart = () => {
   authorChart.setOption(option)
 }
 
-const createDailyChart = () => {
+const createDailyChart = (): void => {
   if (!dailyChartRef.value || !props.analysis) return
 
   if (dailyChart) {
@@ -160,7 +160,7 @@ const createDailyChart = () => {
   dailyChart.setOption(option)
 }
 
-const resizeCharts = () => {
+const resizeCharts = (): void => {
   if (authorChart) {
     authorChart.resize()
   }
@@ -188,7 +188,7 @@ onMounted(() => {
 })
 
 // 清理图表实例
-const cleanup = () => {
+const cleanup = (): void => {
   if (authorChart) {
     authorChart.dispose()
     authorChart = null

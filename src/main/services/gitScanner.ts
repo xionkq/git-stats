@@ -12,7 +12,7 @@ export class GitScanner {
       // 先检查git是否可用
       try {
         execSync('git --version', { stdio: 'pipe' })
-      } catch (gitError) {
+      } catch {
         throw new Error('Git is not installed or not available in PATH')
       }
       // 获取当前分支
@@ -80,9 +80,8 @@ export class GitScanner {
     maxDepth: number = 3
   ): Promise<GitRepository[]> {
     const repos: GitRepository[] = []
-    const self = this
 
-    async function scanRecursive(currentPath: string, depth: number): Promise<void> {
+    const scanRecursive = async (currentPath: string, depth: number): Promise<void> => {
       if (depth > maxDepth) return
 
       try {
@@ -97,7 +96,7 @@ export class GitScanner {
               // 找到了.git目录，说明当前目录是git仓库
               const repoPath = currentPath
               if (!repos.some((repo) => repo.path === repoPath)) {
-                const repoInfo = await self.getRepositoryInfo(repoPath)
+                const repoInfo = await this.getRepositoryInfo(repoPath)
                 repos.push(repoInfo)
               }
               // 不需要递归进入 .git 目录
@@ -118,7 +117,7 @@ export class GitScanner {
       }
     }
 
-    await scanRecursive.call(this, dirPath, 0)
+    await scanRecursive(dirPath, 0)
     return repos
   }
 

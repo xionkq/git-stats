@@ -80,7 +80,7 @@ const emit = defineEmits<{
 
 const validRepositories = computed(() => props.repositories.filter((repo) => repo.isValid))
 
-const handleSelectRepository = (repo: GitRepository) => {
+const handleSelectRepository = (repo: GitRepository): void => {
   if (repo.isValid) {
     emit('selectRepository', repo)
   }

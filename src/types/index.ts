@@ -55,7 +55,7 @@ export interface CacheData {
 // IPC通信消息类型
 export interface IpcMessage {
   type: string
-  payload?: any
+  payload?: unknown
 }
 
 // 进度信息
