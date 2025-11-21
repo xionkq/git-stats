@@ -1,9 +1,7 @@
 <template>
   <div class="repository-detail">
     <div class="detail-header">
-      <button @click="emit('back')" class="back-btn">
-        ← 返回列表
-      </button>
+      <button @click="emit('back')" class="back-btn">← 返回列表</button>
       <h2>{{ repository?.name }}</h2>
     </div>
 
@@ -90,7 +88,7 @@ const createAuthorChart = () => {
 
   authorChart = echarts.init(authorChartRef.value)
 
-  const data = props.analysis.authorStats.map(stat => ({
+  const data = props.analysis.authorStats.map((stat) => ({
     name: stat.author,
     value: stat.commits
   }))
@@ -133,7 +131,7 @@ const createDailyChart = () => {
 
   dailyChart = echarts.init(dailyChartRef.value)
 
-  const data = props.analysis.dailyStats.map(stat => [stat.date, stat.commits])
+  const data = props.analysis.dailyStats.map((stat) => [stat.date, stat.commits])
 
   const option = {
     tooltip: {
@@ -141,7 +139,7 @@ const createDailyChart = () => {
     },
     xAxis: {
       type: 'category',
-      data: props.analysis.dailyStats.map(stat => stat.date)
+      data: props.analysis.dailyStats.map((stat) => stat.date)
     },
     yAxis: {
       type: 'value'
@@ -150,7 +148,7 @@ const createDailyChart = () => {
       {
         name: '提交次数',
         type: 'line',
-        data: data.map(item => item[1]),
+        data: data.map((item) => item[1]),
         smooth: true,
         itemStyle: {
           color: '#007acc'
@@ -171,15 +169,19 @@ const resizeCharts = () => {
   }
 }
 
-watch(() => props.analysis, (newAnalysis) => {
-  if (newAnalysis) {
-    // 延迟创建图表，确保DOM已渲染
-    setTimeout(() => {
-      createAuthorChart()
-      createDailyChart()
-    }, 100)
-  }
-}, { immediate: true })
+watch(
+  () => props.analysis,
+  (newAnalysis) => {
+    if (newAnalysis) {
+      // 延迟创建图表，确保DOM已渲染
+      setTimeout(() => {
+        createAuthorChart()
+        createDailyChart()
+      }, 100)
+    }
+  },
+  { immediate: true }
+)
 
 onMounted(() => {
   window.addEventListener('resize', resizeCharts)
@@ -253,8 +255,12 @@ onUnmounted(cleanup)
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .detail-content {

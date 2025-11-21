@@ -78,9 +78,7 @@ const emit = defineEmits<{
   selectRepository: [repo: GitRepository]
 }>()
 
-const validRepositories = computed(() =>
-  props.repositories.filter(repo => repo.isValid)
-)
+const validRepositories = computed(() => props.repositories.filter((repo) => repo.isValid))
 
 const handleSelectRepository = (repo: GitRepository) => {
   if (repo.isValid) {
@@ -132,8 +130,12 @@ const handleSelectRepository = (repo: GitRepository) => {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .empty-state {
