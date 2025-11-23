@@ -26,9 +26,7 @@ export class GitStatsService {
 
     // 扫描仓库
     ipcMain.handle('git-stats:scan-repositories', async (_, rootPath: string) => {
-      this.sendProgress({ current: 0, total: 1, message: '正在扫描Git仓库...' })
-
-      const scanResult = await this.scanner.scanRepositories(rootPath)
+      const scanResult = await this.scanner.scanRepositories(rootPath, this.sendProgress.bind(this))
 
       this.sendProgress({ current: 1, total: 1, message: '扫描完成' })
 

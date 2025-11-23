@@ -2,7 +2,7 @@ import { dialog } from 'electron'
 import { promises as fs } from 'fs'
 import { join, basename } from 'path'
 import { execSync } from 'child_process'
-import { GitRepository, ScanResult } from '../../types'
+import { GitRepository, ScanResult, ProgressInfo } from '../../types'
 
 export class GitScanner {
   private async getRepositoryInfo(repoPath: string): Promise<GitRepository> {
@@ -77,9 +77,47 @@ export class GitScanner {
 
   private async scanDirectoryForGitRepos(
     dirPath: string,
-    maxDepth: number = 3
+    maxDepth: number = 3,
+    progressCallback?: (progress: ProgressInfo) => void
   ): Promise<GitRepository[]> {
     const repos: GitRepository[] = []
+    let directoriesScanned = 0
+    const directoriesToScan: string[] = [dirPath]
+
+    // 预先收集所有需要扫描的目录
+    const collectDirectories = async (currentPath: string, depth: number): Promise<void> => {
+      if (depth > maxDepth) return
+
+      try {
+        const entries = await fs.readdir(currentPath, { withFileTypes: true })
+
+        for (const entry of entries) {
+          if (entry.isDirectory()) {
+            const fullPath = join(currentPath, entry.name)
+
+            // 跳过不需要扫描的目录
+            if (['node_modules', 'dist', 'build', '.next', '.git'].includes(entry.name)) {
+              continue
+            }
+
+            directoriesToScan.push(fullPath)
+            await collectDirectories(fullPath, depth + 1)
+          }
+        }
+      } catch (error) {
+        // 忽略无法访问的目录
+      }
+    }
+
+    // 先收集所有目录
+    await collectDirectories(dirPath, 0)
+    const totalDirectories = directoriesToScan.length
+
+    progressCallback?.({
+      current: 0,
+      total: totalDirectories,
+      message: `正在扫描目录 (0/${totalDirectories})...`
+    })
 
     const scanRecursive = async (currentPath: string, depth: number): Promise<void> => {
       if (depth > maxDepth) return
@@ -112,8 +150,23 @@ export class GitScanner {
             await scanRecursive(fullPath, depth + 1)
           }
         }
+
+        // 更新进度
+        directoriesScanned++
+        progressCallback?.({
+          current: directoriesScanned,
+          total: totalDirectories,
+          message: `正在扫描目录 (${directoriesScanned}/${totalDirectories})...`
+        })
       } catch (error) {
         console.error(`Error scanning directory ${currentPath}:`, error)
+        // 即使出错也要更新进度
+        directoriesScanned++
+        progressCallback?.({
+          current: directoriesScanned,
+          total: totalDirectories,
+          message: `正在扫描目录 (${directoriesScanned}/${totalDirectories})...`
+        })
       }
     }
 
@@ -134,12 +187,15 @@ export class GitScanner {
     return result.filePaths[0]
   }
 
-  async scanRepositories(rootPath: string): Promise<ScanResult> {
+  async scanRepositories(
+    rootPath: string,
+    progressCallback?: (progress: ProgressInfo) => void
+  ): Promise<ScanResult> {
     const startTime = Date.now()
 
     try {
       console.log('开始扫描目录:', rootPath)
-      const repositories = await this.scanDirectoryForGitRepos(rootPath)
+      const repositories = await this.scanDirectoryForGitRepos(rootPath, 3, progressCallback)
       const scanTime = Date.now() - startTime
 
       console.log('扫描完成，找到仓库数量:', repositories.length)

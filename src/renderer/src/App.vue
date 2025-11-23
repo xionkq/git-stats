@@ -81,7 +81,7 @@ onUnmounted(() => {
       </div>
     </header>
 
-    <ProgressBar v-if="progress" :progress="progress" />
+    <ProgressBar v-if="progress && isScanning" :progress="progress" />
 
     <main class="main">
       <RepositoryList
