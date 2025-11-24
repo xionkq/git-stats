@@ -1,5 +1,12 @@
 import { execSync } from 'child_process'
-import { CommitStats, AuthorStats, RepositoryAnalysis, GitRepository } from '../../types'
+import {
+  CommitStats,
+  AuthorStats,
+  RepositoryAnalysis,
+  GitRepository,
+  ContributorStats,
+  YearComparison
+} from '../../types'
 
 export class GitAnalyzer {
   private parseGitLogOutput(output: string): CommitStats[] {
@@ -138,5 +145,159 @@ export class GitAnalyzer {
     }
 
     return results
+  }
+
+  async analyzeContributor(
+    account: string,
+    repositories: GitRepository[],
+    year1?: number,
+    year2?: number
+  ): Promise<ContributorStats> {
+    const repoStats: ContributorStats['repositories'] = []
+    const allCommits: CommitStats[] = []
+    const dailyMap = new Map<string, number>()
+
+    for (const repo of repositories) {
+      if (!repo.isValid) continue
+
+      try {
+        // 先获取提交记录
+        const gitLogCommand =
+          process.platform === 'win32'
+            ? `git log --pretty=format:"%H|%an|%ad|%s" --date=short --author="${account}"`
+            : `git log --pretty=format:"%H|%an|%ad|%s" --date=short --author="${account}"`
+
+        const logOutput = execSync(gitLogCommand, {
+          cwd: repo.path,
+          encoding: 'utf8',
+          maxBuffer: 10 * 1024 * 1024,
+          shell: process.platform === 'win32' ? 'cmd.exe' : undefined
+        })
+
+        const commits = this.parseGitLogOutput(logOutput)
+        const filteredCommits = commits.filter((commit) => commit.author === account)
+
+        // 为每个提交获取代码修改行数
+        const commitsWithStats: CommitStats[] = []
+        for (const commit of filteredCommits) {
+          try {
+            // 获取单个提交的numstat统计
+            const numstatCommand =
+              process.platform === 'win32'
+                ? `git show --numstat --format="" ${commit.hash}`
+                : `git show --numstat --format="" ${commit.hash}`
+
+            const numstatOutput = execSync(numstatCommand, {
+              cwd: repo.path,
+              encoding: 'utf8',
+              maxBuffer: 1024 * 1024,
+              shell: process.platform === 'win32' ? 'cmd.exe' : undefined
+            })
+
+            let addedLines = 0
+            let deletedLines = 0
+            const numstatLines = numstatOutput.trim().split('\n')
+            for (const line of numstatLines) {
+              if (!line.trim()) continue
+              const match = line.match(/^(\d+)\s+(\d+)\s+/)
+              if (match) {
+                addedLines += parseInt(match[1]) || 0
+                deletedLines += parseInt(match[2]) || 0
+              }
+            }
+
+            commitsWithStats.push({
+              ...commit,
+              addedLines,
+              deletedLines
+            })
+          } catch {
+            // 如果获取numstat失败，使用0
+            commitsWithStats.push({
+              ...commit,
+              addedLines: 0,
+              deletedLines: 0
+            })
+          }
+        }
+
+        if (commitsWithStats.length > 0) {
+          // 计算该仓库中的百分比
+          const totalCommits = repo.totalCommits || commitsWithStats.length
+          const percentage = totalCommits > 0 ? (commitsWithStats.length / totalCommits) * 100 : 0
+
+          repoStats.push({
+            repository: repo,
+            commits: commitsWithStats.length,
+            percentage,
+            commitsList: commitsWithStats
+          })
+
+          // 收集所有提交用于统计
+          allCommits.push(...commitsWithStats)
+
+          // 统计每日提交
+          commitsWithStats.forEach((commit) => {
+            const count = dailyMap.get(commit.date) || 0
+            dailyMap.set(commit.date, count + 1)
+          })
+        }
+      } catch (error) {
+        console.error(`Error analyzing contributor in repository ${repo.path}:`, error)
+        // 如果git命令失败（例如账号不存在），继续处理下一个仓库
+        continue
+      }
+    }
+
+    // 计算每日统计
+    const dailyStats = Array.from(dailyMap.entries())
+      .map(([date, commits]) => ({ date, commits }))
+      .sort((a, b) => a.date.localeCompare(b.date))
+
+    // 计算年份对比
+    let yearComparison: ContributorStats['yearComparison'] | undefined = undefined
+
+    if (year1 !== undefined && year2 !== undefined) {
+      const year1Start = new Date(year1, 0, 1)
+      const year1End = new Date(year1, 11, 31, 23, 59, 59, 999)
+      const year2Start = new Date(year2, 0, 1)
+      const year2End = new Date(year2, 11, 31, 23, 59, 59, 999)
+
+      const year1Commits = allCommits.filter((commit) => {
+        const commitDate = new Date(commit.date)
+        return commitDate >= year1Start && commitDate <= year1End
+      })
+
+      const year2Commits = allCommits.filter((commit) => {
+        const commitDate = new Date(commit.date)
+        return commitDate >= year2Start && commitDate <= year2End
+      })
+
+      const calculateYearStats = (commits: CommitStats[], year: number): YearComparison => {
+        const addedLines = commits.reduce((sum, commit) => sum + (commit.addedLines || 0), 0)
+        const deletedLines = commits.reduce((sum, commit) => sum + (commit.deletedLines || 0), 0)
+        return {
+          year,
+          commits: commits.length,
+          addedLines,
+          deletedLines,
+          netLines: addedLines - deletedLines
+        }
+      }
+
+      yearComparison = {
+        year1: calculateYearStats(year1Commits, year1),
+        year2: calculateYearStats(year2Commits, year2)
+      }
+    }
+
+    return {
+      account,
+      totalCommits: allCommits.length,
+      repositories: repoStats,
+      dailyStats,
+      yearComparison,
+      lastUpdated: new Date().toISOString()
+    }
   }
 }

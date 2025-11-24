@@ -17,6 +17,8 @@ export interface CommitStats {
   author: string
   date: string
   message: string
+  addedLines?: number
+  deletedLines?: number
 }
 
 // 作者贡献统计
@@ -63,4 +65,31 @@ export interface ProgressInfo {
   current: number
   total: number
   message: string
+}
+
+// 年份对比统计
+export interface YearComparison {
+  year: number
+  commits: number
+  addedLines: number
+  deletedLines: number
+  netLines: number // 净增行数
+}
+
+// 个人贡献统计
+export interface ContributorStats {
+  account: string
+  totalCommits: number
+  repositories: {
+    repository: GitRepository
+    commits: number
+    percentage: number
+    commitsList: CommitStats[]
+  }[]
+  dailyStats: { date: string; commits: number }[]
+  yearComparison?: {
+    year1: YearComparison
+    year2: YearComparison
+  }
+  lastUpdated: string
 }

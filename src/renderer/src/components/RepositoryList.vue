@@ -22,11 +22,20 @@
         v-for="repo in repositories"
         :key="repo.path"
         class="repository-card"
-        :class="{ invalid: !repo.isValid }"
-        @click="handleSelectRepository(repo)"
+        :class="{ invalid: !repo.isValid, selected: isSelected(repo) }"
+        @click="handleCardClick(repo)"
       >
         <div class="card-header">
-          <h3>{{ repo.name }}</h3>
+          <div class="card-header-left">
+            <input
+              v-if="repo.isValid"
+              type="checkbox"
+              :checked="isSelected(repo)"
+              class="repo-checkbox"
+              @click.stop="handleCheckboxClick(repo)"
+            />
+            <h3>{{ repo.name }}</h3>
+          </div>
           <span class="status" :class="{ valid: repo.isValid, invalid: !repo.isValid }">
             {{ repo.isValid ? '有效' : '无效' }}
           </span>
@@ -64,7 +73,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { GitRepository } from '@types'
 
 interface Props {
@@ -74,17 +83,99 @@ interface Props {
 
 const props = defineProps<Props>()
 
+const selectedRepos = ref<Set<string>>(new Set())
+
 const emit = defineEmits<{
   selectRepository: [repo: GitRepository]
+  selectionChange: [repos: GitRepository[]]
 }>()
 
 const validRepositories = computed(() => props.repositories.filter((repo) => repo.isValid))
 
-const handleSelectRepository = (repo: GitRepository): void => {
-  if (repo.isValid) {
-    emit('selectRepository', repo)
-  }
+const selectedValidCount = computed(() => {
+  return validRepositories.value.filter((repo) => selectedRepos.value.has(repo.path)).length
+})
+
+const isAllSelected = computed(() => {
+  return (
+    validRepositories.value.length > 0 &&
+    selectedValidCount.value === validRepositories.value.length
+  )
+})
+
+const isIndeterminate = computed(() => {
+  return selectedValidCount.value > 0 && selectedValidCount.value < validRepositories.value.length
+})
+
+const isSelected = (repo: GitRepository): boolean => {
+  return selectedRepos.value.has(repo.path)
 }
+
+// const handleSelectAll = (event: Event): void => {
+//   const target = event.target as HTMLInputElement
+//   if (target.checked) {
+//     // 全选所有有效仓库
+//     validRepositories.value.forEach((repo) => {
+//       selectedRepos.value.add(repo.path)
+//     })
+//   } else {
+//     // 取消全选
+//     validRepositories.value.forEach((repo) => {
+//       selectedRepos.value.delete(repo.path)
+//     })
+//   }
+//   emitSelectionChange()
+// }
+
+const handleCheckboxClick = (repo: GitRepository): void => {
+  if (!repo.isValid) return
+
+  if (selectedRepos.value.has(repo.path)) {
+    selectedRepos.value.delete(repo.path)
+  } else {
+    selectedRepos.value.add(repo.path)
+  }
+
+  emitSelectionChange()
+}
+
+const handleCardClick = (repo: GitRepository): void => {
+  if (!repo.isValid) return
+
+  // 点击卡片其他区域进入详情页（checkbox的点击事件已经通过@click.stop阻止冒泡）
+  emit('selectRepository', repo)
+}
+
+const emitSelectionChange = (): void => {
+  const selected = props.repositories.filter((repo) => selectedRepos.value.has(repo.path))
+  emit('selectionChange', selected)
+}
+
+// 暴露方法供父组件调用
+defineExpose({
+  getSelectedRepos: () => {
+    return props.repositories.filter((repo) => selectedRepos.value.has(repo.path))
+  },
+  clearSelection: () => {
+    selectedRepos.value.clear()
+    emitSelectionChange()
+  },
+  selectAll: () => {
+    validRepositories.value.forEach((repo) => {
+      selectedRepos.value.add(repo.path)
+    })
+    emitSelectionChange()
+  },
+  unselectAll: () => {
+    validRepositories.value.forEach((repo) => {
+      selectedRepos.value.delete(repo.path)
+    })
+    emitSelectionChange()
+  },
+  getIsAllSelected: () => isAllSelected.value,
+  getIsIndeterminate: () => isIndeterminate.value,
+  getValidRepositoriesCount: () => validRepositories.value.length
+})
 </script>
 
 <style scoped>
@@ -163,6 +254,12 @@ const handleSelectRepository = (repo: GitRepository): void => {
   box-shadow: 0 2px 8px rgba(0, 122, 204, 0.1);
 }
 
+.repository-card.selected {
+  border-color: #007acc;
+  background-color: #f0f7ff;
+  box-shadow: 0 2px 8px rgba(0, 122, 204, 0.15);
+}
+
 .repository-card.invalid {
   opacity: 0.7;
   cursor: not-allowed;
@@ -178,6 +275,20 @@ const handleSelectRepository = (repo: GitRepository): void => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 12px;
+}
+
+.card-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.repo-checkbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #007acc;
 }
 
 .card-header h3 {

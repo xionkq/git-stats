@@ -123,6 +123,33 @@ export class GitStatsService {
     ipcMain.handle('git-stats:clear-cache', async (_, repoPath?: string) => {
       await this.cacheManager.clearCache(repoPath)
     })
+
+    // 统计指定账号的贡献
+    ipcMain.handle(
+      'git-stats:analyze-contributor',
+      async (_, account: string, repositories: GitRepository[], year1?: number, year2?: number) => {
+        try {
+          this.sendProgress({
+            current: 0,
+            total: repositories.length,
+            message: `正在统计 ${account} 的贡献...`
+          })
+
+          const stats = await this.analyzer.analyzeContributor(account, repositories, year1, year2)
+
+          this.sendProgress({
+            current: repositories.length,
+            total: repositories.length,
+            message: '统计完成'
+          })
+
+          return JSON.parse(JSON.stringify(stats))
+        } catch (error) {
+          console.error('Error in analyze-contributor handler:', error)
+          throw error
+        }
+      }
+    )
   }
 
   private sendProgress(progress: ProgressInfo): void {

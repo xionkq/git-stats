@@ -104,7 +104,7 @@ export class GitScanner {
             await collectDirectories(fullPath, depth + 1)
           }
         }
-      } catch (error) {
+      } catch {
         // 忽略无法访问的目录
       }
     }

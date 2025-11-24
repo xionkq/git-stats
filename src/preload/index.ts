@@ -1,6 +1,12 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
-import { GitRepository, RepositoryAnalysis, ScanResult, ProgressInfo } from '../types'
+import {
+  GitRepository,
+  RepositoryAnalysis,
+  ScanResult,
+  ProgressInfo,
+  ContributorStats
+} from '../types'
 
 // Git Stats API for renderer
 const gitStatsAPI = {
@@ -23,6 +29,21 @@ const gitStatsAPI = {
     return ipcRenderer.invoke(
       'git-stats:analyze-repositories',
       JSON.parse(JSON.stringify(repositories))
+    )
+  },
+
+  analyzeContributor: (
+    account: string,
+    repositories: GitRepository[],
+    year1?: number,
+    year2?: number
+  ): Promise<ContributorStats> => {
+    return ipcRenderer.invoke(
+      'git-stats:analyze-contributor',
+      account,
+      JSON.parse(JSON.stringify(repositories)),
+      year1,
+      year2
     )
   },
 
