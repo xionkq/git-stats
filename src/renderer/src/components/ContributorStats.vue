@@ -165,6 +165,110 @@
                   }}
                 </td>
               </tr>
+              <tr>
+                <td class="metric-label">新增代码最多月份</td>
+                <td class="metric-value">
+                  {{ formatMonthWithLines(stats.yearComparison.year1.maxAddedMonth) }}
+                </td>
+                <td class="metric-value">
+                  {{ formatMonthWithLines(stats.yearComparison.year2.maxAddedMonth) }}
+                </td>
+                <td
+                  class="change-value"
+                  :class="
+                    getChangeClass(
+                      (stats.yearComparison.year2.maxAddedMonth?.lines || 0) -
+                        (stats.yearComparison.year1.maxAddedMonth?.lines || 0)
+                    )
+                  "
+                >
+                  {{
+                    formatChangeWithPercent(
+                      (stats.yearComparison.year2.maxAddedMonth?.lines || 0) -
+                        (stats.yearComparison.year1.maxAddedMonth?.lines || 0),
+                      stats.yearComparison.year1.maxAddedMonth?.lines || 0
+                    )
+                  }}
+                </td>
+              </tr>
+              <tr>
+                <td class="metric-label">新增代码最少月份</td>
+                <td class="metric-value">
+                  {{ formatMonthWithLines(stats.yearComparison.year1.minAddedMonth) }}
+                </td>
+                <td class="metric-value">
+                  {{ formatMonthWithLines(stats.yearComparison.year2.minAddedMonth) }}
+                </td>
+                <td
+                  class="change-value"
+                  :class="
+                    getChangeClass(
+                      (stats.yearComparison.year2.minAddedMonth?.lines || 0) -
+                        (stats.yearComparison.year1.minAddedMonth?.lines || 0)
+                    )
+                  "
+                >
+                  {{
+                    formatChangeWithPercent(
+                      (stats.yearComparison.year2.minAddedMonth?.lines || 0) -
+                        (stats.yearComparison.year1.minAddedMonth?.lines || 0),
+                      stats.yearComparison.year1.minAddedMonth?.lines || 0
+                    )
+                  }}
+                </td>
+              </tr>
+              <tr>
+                <td class="metric-label">提交过的仓库数</td>
+                <td class="metric-value">
+                  {{ stats.yearComparison.year1.repositoryCount }}
+                </td>
+                <td class="metric-value">
+                  {{ stats.yearComparison.year2.repositoryCount }}
+                </td>
+                <td
+                  class="change-value"
+                  :class="
+                    getChangeClass(
+                      stats.yearComparison.year2.repositoryCount -
+                        stats.yearComparison.year1.repositoryCount
+                    )
+                  "
+                >
+                  {{
+                    formatChangeWithPercent(
+                      stats.yearComparison.year2.repositoryCount -
+                        stats.yearComparison.year1.repositoryCount,
+                      stats.yearComparison.year1.repositoryCount
+                    )
+                  }}
+                </td>
+              </tr>
+              <tr>
+                <td class="metric-label">新增代码最多仓库</td>
+                <td class="metric-value">
+                  {{ formatRepositoryWithLines(stats.yearComparison.year1.maxAddedRepository) }}
+                </td>
+                <td class="metric-value">
+                  {{ formatRepositoryWithLines(stats.yearComparison.year2.maxAddedRepository) }}
+                </td>
+                <td
+                  class="change-value"
+                  :class="
+                    getChangeClass(
+                      (stats.yearComparison.year2.maxAddedRepository?.lines || 0) -
+                        (stats.yearComparison.year1.maxAddedRepository?.lines || 0)
+                    )
+                  "
+                >
+                  {{
+                    formatChangeWithPercent(
+                      (stats.yearComparison.year2.maxAddedRepository?.lines || 0) -
+                        (stats.yearComparison.year1.maxAddedRepository?.lines || 0),
+                      stats.yearComparison.year1.maxAddedRepository?.lines || 0
+                    )
+                  }}
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -297,6 +401,18 @@ const getChangeClass = (change: number): string => {
   if (change > 0) return 'change-positive'
   if (change < 0) return 'change-negative'
   return 'change-neutral'
+}
+
+const formatMonthWithLines = (monthData: { month: number; lines: number } | undefined): string => {
+  if (!monthData) return '—'
+  return `${monthData.month}月（${formatNumber(monthData.lines)}）`
+}
+
+const formatRepositoryWithLines = (
+  repoData: { name: string; path: string; lines: number } | undefined
+): string => {
+  if (!repoData) return '—'
+  return `${repoData.name}（${formatNumber(repoData.lines)}）`
 }
 
 const createDailyChart = (): void => {

@@ -74,6 +74,10 @@ export interface YearComparison {
   addedLines: number
   deletedLines: number
   netLines: number // 净增行数
+  maxAddedMonth?: { month: number; lines: number } // 新增代码最多月份
+  minAddedMonth?: { month: number; lines: number } // 新增代码最少月份
+  repositoryCount: number // 提交过的仓库数
+  maxAddedRepository?: { name: string; path: string; lines: number } // 新增代码最多仓库
 }
 
 // 个人贡献统计

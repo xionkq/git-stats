@@ -273,21 +273,127 @@ export class GitAnalyzer {
         return commitDate >= year2Start && commitDate <= year2End
       })
 
-      const calculateYearStats = (commits: CommitStats[], year: number): YearComparison => {
+      const calculateYearStats = (
+        commits: CommitStats[],
+        year: number,
+        repoStats: ContributorStats['repositories'],
+        yearStart: Date,
+        yearEnd: Date
+      ): YearComparison => {
         const addedLines = commits.reduce((sum, commit) => sum + (commit.addedLines || 0), 0)
         const deletedLines = commits.reduce((sum, commit) => sum + (commit.deletedLines || 0), 0)
+
+        // 按月份统计新增代码行数
+        const monthStats = new Map<number, number>()
+        commits.forEach((commit) => {
+          const commitDate = new Date(commit.date)
+          // 检查日期是否有效
+          if (isNaN(commitDate.getTime())) {
+            console.warn(`Invalid date for commit ${commit.hash}: ${commit.date}`)
+            return
+          }
+          const month = commitDate.getMonth() + 1 // 月份从1开始
+          const currentLines = monthStats.get(month) || 0
+          monthStats.set(month, currentLines + (commit.addedLines || 0))
+        })
+
+        // 找出新增代码最多和最少的月份
+        let maxAddedMonth: { month: number; lines: number } | undefined = undefined
+        let minAddedMonth: { month: number; lines: number } | undefined = undefined
+
+        if (monthStats.size > 0) {
+          let maxLines: number | undefined = undefined
+          let minLines: number | undefined = undefined
+
+          monthStats.forEach((lines, month) => {
+            // 初始化第一个月份的值
+            if (maxLines === undefined) {
+              maxLines = lines
+              minLines = lines
+              maxAddedMonth = { month, lines }
+              minAddedMonth = { month, lines }
+            } else {
+              // 更新最多月份
+              if (lines > maxLines) {
+                maxLines = lines
+                maxAddedMonth = { month, lines }
+              }
+              // 更新最少月份
+              if (lines < minLines) {
+                minLines = lines
+                minAddedMonth = { month, lines }
+              }
+            }
+          })
+
+          // 调试日志：检查月份统计数据
+          if (commits.length > 0 && (!maxAddedMonth || !minAddedMonth)) {
+            console.warn(
+              `Year ${year}: commits=${commits.length}, monthStats.size=${monthStats.size}, maxAddedMonth=${JSON.stringify(maxAddedMonth)}, minAddedMonth=${JSON.stringify(minAddedMonth)}`
+            )
+          }
+        } else if (commits.length > 0) {
+          // 如果有提交但没有月份统计，可能是日期解析问题
+          console.warn(`Year ${year}: has ${commits.length} commits but monthStats is empty`)
+        }
+
+        // 按仓库统计：找出该年份有提交的仓库和新增代码最多的仓库
+        const repoStatsMap = new Map<string, number>() // 仓库路径 -> 新增代码行数
+        let repositoryCount = 0
+
+        repoStats.forEach((repoStat) => {
+          // 过滤该年份的提交
+          const yearCommits = repoStat.commitsList.filter((commit) => {
+            const commitDate = new Date(commit.date)
+            return commitDate >= yearStart && commitDate <= yearEnd
+          })
+
+          if (yearCommits.length > 0) {
+            repositoryCount++
+            // 计算该仓库在该年份的新增代码行数
+            const repoAddedLines = yearCommits.reduce(
+              (sum, commit) => sum + (commit.addedLines || 0),
+              0
+            )
+            repoStatsMap.set(repoStat.repository.path, repoAddedLines)
+          }
+        })
+
+        // 找出新增代码最多的仓库
+        let maxAddedRepository: { name: string; path: string; lines: number } | undefined =
+          undefined
+        let maxRepoLines = -1
+
+        repoStatsMap.forEach((lines, path) => {
+          if (lines > maxRepoLines) {
+            maxRepoLines = lines
+            const repoStat = repoStats.find((r) => r.repository.path === path)
+            if (repoStat) {
+              maxAddedRepository = {
+                name: repoStat.repository.name,
+                path: repoStat.repository.path,
+                lines
+              }
+            }
+          }
+        })
+
         return {
           year,
           commits: commits.length,
           addedLines,
           deletedLines,
-          netLines: addedLines - deletedLines
+          netLines: addedLines - deletedLines,
+          maxAddedMonth,
+          minAddedMonth,
+          repositoryCount,
+          maxAddedRepository
         }
       }
 
       yearComparison = {
-        year1: calculateYearStats(year1Commits, year1),
-        year2: calculateYearStats(year2Commits, year2)
+        year1: calculateYearStats(year1Commits, year1, repoStats, year1Start, year1End),
+        year2: calculateYearStats(year2Commits, year2, repoStats, year2Start, year2End)
       }
     }
 
