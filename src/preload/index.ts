@@ -18,10 +18,14 @@ const gitStatsAPI = {
     return ipcRenderer.invoke('git-stats:scan-repositories', rootPath)
   },
 
-  analyzeRepository: (repository: GitRepository): Promise<RepositoryAnalysis> => {
+  analyzeRepository: (
+    repository: GitRepository,
+    branchName?: string
+  ): Promise<RepositoryAnalysis> => {
     return ipcRenderer.invoke(
       'git-stats:analyze-repository',
-      JSON.parse(JSON.stringify(repository))
+      JSON.parse(JSON.stringify(repository)),
+      branchName
     )
   },
 
@@ -36,14 +40,16 @@ const gitStatsAPI = {
     account: string,
     repositories: GitRepository[],
     year1?: number,
-    year2?: number
+    year2?: number,
+    branchName?: string
   ): Promise<ContributorStats> => {
     return ipcRenderer.invoke(
       'git-stats:analyze-contributor',
       account,
       JSON.parse(JSON.stringify(repositories)),
       year1,
-      year2
+      year2,
+      branchName
     )
   },
 

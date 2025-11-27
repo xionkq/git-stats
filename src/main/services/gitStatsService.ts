@@ -34,40 +34,43 @@ export class GitStatsService {
     })
 
     // 分析仓库
-    ipcMain.handle('git-stats:analyze-repository', async (_, repository: GitRepository) => {
-      try {
-        // 确保输入的repository对象是可序列化的
-        const serializableRepository = JSON.parse(JSON.stringify(repository))
+    ipcMain.handle(
+      'git-stats:analyze-repository',
+      async (_, repository: GitRepository, branchName?: string) => {
+        try {
+          // 确保输入的repository对象是可序列化的
+          const serializableRepository = JSON.parse(JSON.stringify(repository))
 
-        // 检查缓存
-        // const isValid = await this.cacheManager.isCacheValid(
-        //   serializableRepository.path,
-        //   serializableRepository.latestCommitHash
-        // )
+          // 检查缓存
+          // const isValid = await this.cacheManager.isCacheValid(
+          //   serializableRepository.path,
+          //   serializableRepository.latestCommitHash
+          // )
 
-        // if (isValid) {
-        //   const cache = await this.cacheManager.getCache(serializableRepository.path)
-        //   if (cache?.stats) {
-        //     // 确保返回的对象是可序列化的
-        //     return JSON.parse(JSON.stringify(cache.stats))
-        //   }
-        // }
+          // if (isValid) {
+          //   const cache = await this.cacheManager.getCache(serializableRepository.path)
+          //   if (cache?.stats) {
+          //     // 确保返回的对象是可序列化的
+          //     return JSON.parse(JSON.stringify(cache.stats))
+          //   }
+          // }
 
-        // 重新分析
-        const analysis = await this.analyzer.analyzeRepository(serializableRepository)
+          // 重新分析
+          const analysis = await this.analyzer.analyzeRepository(serializableRepository, branchName)
 
-        // 确保返回的对象是可序列化的
-        const serializableAnalysis = JSON.parse(JSON.stringify(analysis))
+          // 确保返回的对象是可序列化的
+          const serializableAnalysis = JSON.parse(JSON.stringify(analysis))
 
-        // 保存到缓存
-        await this.cacheManager.setCache(serializableRepository.path, analysis)
+          // 保存到缓存
+          await this.cacheManager.setCache(serializableRepository.path, analysis)
 
-        return serializableAnalysis
-      } catch (error) {
-        console.error('Error in analyze-repository handler:', error)
-        throw error
+          return serializableAnalysis
+        } catch (error) {
+          console.error('Error in analyze-repository handler:', error)
+          throw error
+        }
       }
-    })
+    )
 
     // 批量分析仓库
     ipcMain.handle('git-stats:analyze-repositories', async (_, repositories: GitRepository[]) => {
@@ -127,7 +130,14 @@ export class GitStatsService {
     // 统计指定账号的贡献
     ipcMain.handle(
       'git-stats:analyze-contributor',
-      async (_, account: string, repositories: GitRepository[], year1?: number, year2?: number) => {
+      async (
+        _,
+        account: string,
+        repositories: GitRepository[],
+        year1?: number,
+        year2?: number,
+        branchName?: string
+      ) => {
         try {
           this.sendProgress({
             current: 0,
@@ -135,7 +145,13 @@ export class GitStatsService {
             message: `正在统计 ${account} 的贡献...`
           })
 
-          const stats = await this.analyzer.analyzeContributor(account, repositories, year1, year2)
+          const stats = await this.analyzer.analyzeContributor(
+            account,
+            repositories,
+            year1,
+            year2,
+            branchName
+          )
 
           this.sendProgress({
             current: repositories.length,

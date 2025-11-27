@@ -13,6 +13,7 @@ import ContributorStatsView from './components/ContributorStats.vue'
 import ProgressBar from './components/ProgressBar.vue'
 
 const selectedDirectory = ref<string>('')
+const branchName = ref<string>('') // 分支名称，为空则使用当前分支
 const repositories = ref<GitRepository[]>([])
 const selectedRepository = ref<GitRepository | null>(null)
 const repositoryAnalysis = ref<RepositoryAnalysis | null>(null)
@@ -91,6 +92,7 @@ const scanRepositories = async (): Promise<void> => {
   isScanning.value = true
   try {
     console.log('开始扫描目录:', selectedDirectory.value)
+    console.log('指定分支:', branchName.value.trim() || '使用当前分支')
     const result: ScanResult = await window.gitStats.scanRepositories(selectedDirectory.value)
     console.log('扫描结果:', result)
     repositories.value = result.repositories
@@ -108,7 +110,10 @@ const selectRepository = async (repo: GitRepository): Promise<void> => {
   currentView.value = 'detail'
 
   try {
-    const analysis = await window.gitStats.analyzeRepository(JSON.parse(JSON.stringify(repo)))
+    const analysis = await window.gitStats.analyzeRepository(
+      JSON.parse(JSON.stringify(repo)),
+      branchName.value.trim() || undefined
+    )
     console.log('分析结果:', analysis)
     repositoryAnalysis.value = analysis
   } catch (error) {
@@ -149,7 +154,8 @@ const analyzeContributor = async (): Promise<void> => {
       accountName.value.trim(),
       JSON.parse(JSON.stringify(selectedRepos.value)),
       year1,
-      year2
+      year2,
+      branchName.value.trim() || undefined
     )
     console.log('贡献统计结果:', stats)
     contributorStats.value = stats
@@ -176,7 +182,8 @@ const handleYearChange = async (year1: number, year2: number): Promise<void> => 
       accountName.value.trim(),
       JSON.parse(JSON.stringify(selectedRepos.value)),
       year1,
-      year2
+      year2,
+      branchName.value.trim() || undefined
     )
     console.log('贡献统计结果:', stats)
     contributorStats.value = stats
@@ -211,6 +218,15 @@ onUnmounted(() => {
     <header class="header">
       <h1>📄 Git 多仓库可视化分析工具</h1>
       <div class="header-actions">
+        <div class="branch-input-group">
+          <input
+            v-model="branchName"
+            type="text"
+            placeholder="分支名（留空使用当前分支）"
+            class="branch-input"
+            :disabled="isScanning"
+          />
+        </div>
         <button :disabled="isScanning" class="btn-primary" @click="selectDirectory">
           {{ isScanning ? '扫描中...' : '选择目录' }}
         </button>
@@ -321,6 +337,35 @@ body {
   display: flex;
   align-items: center;
   gap: 16px;
+}
+
+.branch-input-group {
+  display: flex;
+  align-items: center;
+}
+
+.branch-input {
+  padding: 8px 12px;
+  border: 1px solid #d1d9e0;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #24292f;
+  outline: none;
+  transition: border-color 0.2s;
+  width: 200px;
+}
+
+.branch-input:focus {
+  border-color: #007acc;
+}
+
+.branch-input:disabled {
+  background-color: #f6f8fa;
+  cursor: not-allowed;
+}
+
+.branch-input::placeholder {
+  color: #8c959f;
 }
 
 .btn-primary {

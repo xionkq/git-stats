@@ -69,10 +69,14 @@ export class GitAnalyzer {
       .sort((a, b) => a.date.localeCompare(b.date))
   }
 
-  async analyzeRepository(repository: GitRepository): Promise<RepositoryAnalysis> {
+  async analyzeRepository(
+    repository: GitRepository,
+    branchName?: string
+  ): Promise<RepositoryAnalysis> {
     try {
       console.log(`开始分析仓库: ${repository.path}`)
       console.log(`仓库分支: ${repository.currentBranch}`)
+      console.log(`指定分支: ${branchName || '使用当前分支'}`)
 
       // 先检查git是否可用
       try {
@@ -82,8 +86,21 @@ export class GitAnalyzer {
       }
 
       // 获取提交历史 - 包含message，并且不限制时间范围
+      // 如果指定了分支名，使用该分支；否则使用当前分支（HEAD）
       // 在Windows上需要使用双引号来避免%被当作环境变量
-      const gitLogCommand = `git log --pretty=format:"%H|%an|%ad|%s" --date=short`
+      // 注意：使用 git log <branch-name> 不会切换分支，只是查询该分支的提交历史
+      let branchArg = 'HEAD'
+      if (branchName) {
+        const trimmedBranch = branchName.trim()
+        // 基本验证：确保分支名不包含明显的命令注入字符
+        // Git分支名可以包含字母、数字、连字符、下划线、斜杠、点等，但不能包含换行符、分号等
+        if (trimmedBranch && !/[\n\r;|&<>$`]/.test(trimmedBranch)) {
+          branchArg = trimmedBranch
+        } else {
+          console.warn(`无效的分支名: ${trimmedBranch}，将使用当前分支`)
+        }
+      }
+      const gitLogCommand = `git log ${branchArg} --pretty=format:"%H|%an|%ad|%s" --date=short`
       console.log(`执行Git命令: ${gitLogCommand}`)
 
       const logOutput = execSync(gitLogCommand, {
@@ -151,7 +168,8 @@ export class GitAnalyzer {
     account: string,
     repositories: GitRepository[],
     year1?: number,
-    year2?: number
+    year2?: number,
+    branchName?: string
   ): Promise<ContributorStats> {
     const repoStats: ContributorStats['repositories'] = []
     const allCommits: CommitStats[] = []
@@ -162,10 +180,21 @@ export class GitAnalyzer {
 
       try {
         // 先获取提交记录
+        // 如果指定了分支名，使用该分支；否则使用当前分支（HEAD）
+        let branchArg = 'HEAD'
+        if (branchName) {
+          const trimmedBranch = branchName.trim()
+          // 基本验证：确保分支名不包含明显的命令注入字符
+          if (trimmedBranch && !/[\n\r;|&<>$`]/.test(trimmedBranch)) {
+            branchArg = trimmedBranch
+          } else {
+            console.warn(`无效的分支名: ${trimmedBranch}，将使用当前分支`)
+          }
+        }
         const gitLogCommand =
           process.platform === 'win32'
-            ? `git log --pretty=format:"%H|%an|%ad|%s" --date=short --author="${account}"`
-            : `git log --pretty=format:"%H|%an|%ad|%s" --date=short --author="${account}"`
+            ? `git log ${branchArg} --pretty=format:"%H|%an|%ad|%s" --date=short --author="${account}"`
+            : `git log ${branchArg} --pretty=format:"%H|%an|%ad|%s" --date=short --author="${account}"`
 
         const logOutput = execSync(gitLogCommand, {
           cwd: repo.path,
