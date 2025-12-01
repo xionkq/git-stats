@@ -336,7 +336,7 @@ export class GitAnalyzer {
 
           monthStats.forEach((lines, month) => {
             // 初始化第一个月份的值
-            if (maxLines === undefined) {
+            if (maxLines === undefined || minLines === undefined) {
               maxLines = lines
               minLines = lines
               maxAddedMonth = { month, lines }
