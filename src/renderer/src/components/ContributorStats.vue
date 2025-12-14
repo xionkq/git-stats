@@ -272,6 +272,64 @@
             </tbody>
           </table>
         </div>
+
+        <div class="repository-comparison-table-container">
+          <h4 class="repository-comparison-title">各仓库代码新增/删除对比</h4>
+          <div class="comparison-table-container">
+            <table class="comparison-table repository-comparison-table">
+              <thead>
+                <tr>
+                  <th class="repo-name-column">仓库名称</th>
+                  <th class="period-column">{{ stats.yearComparison.year1.year }}年新增</th>
+                  <th class="period-column">{{ stats.yearComparison.year1.year }}年删除</th>
+                  <th class="period-column">{{ stats.yearComparison.year2.year }}年新增</th>
+                  <th class="period-column">{{ stats.yearComparison.year2.year }}年删除</th>
+                  <th class="change-column">新增变化</th>
+                  <th class="change-column">删除变化</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="repoComp in repositoryYearComparison" :key="repoComp.repository.path">
+                  <td class="repo-name-cell">
+                    <div class="repo-name">{{ repoComp.repository.name }}</div>
+                    <div class="repo-path-small">{{ repoComp.repository.path }}</div>
+                  </td>
+                  <td class="metric-value">{{ formatNumber(repoComp.year1.addedLines) }}</td>
+                  <td class="metric-value">{{ formatNumber(repoComp.year1.deletedLines) }}</td>
+                  <td class="metric-value">{{ formatNumber(repoComp.year2.addedLines) }}</td>
+                  <td class="metric-value">{{ formatNumber(repoComp.year2.deletedLines) }}</td>
+                  <td
+                    class="change-value"
+                    :class="getChangeClass(repoComp.year2.addedLines - repoComp.year1.addedLines)"
+                  >
+                    {{
+                      formatChangeWithPercent(
+                        repoComp.year2.addedLines - repoComp.year1.addedLines,
+                        repoComp.year1.addedLines
+                      )
+                    }}
+                  </td>
+                  <td
+                    class="change-value"
+                    :class="
+                      getChangeClass(repoComp.year2.deletedLines - repoComp.year1.deletedLines)
+                    "
+                  >
+                    {{
+                      formatChangeWithPercent(
+                        repoComp.year2.deletedLines - repoComp.year1.deletedLines,
+                        repoComp.year1.deletedLines
+                      )
+                    }}
+                  </td>
+                </tr>
+                <tr v-if="repositoryYearComparison.length === 0">
+                  <td colspan="7" class="no-data">暂无数据</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
 
       <div class="repositories-section">
@@ -414,6 +472,89 @@ const formatRepositoryWithLines = (
   if (!repoData) return '—'
   return `${repoData.name}（${formatNumber(repoData.lines)}）`
 }
+
+// 计算每个仓库在两个年份的代码新增和删除对比
+interface RepositoryYearComparison {
+  repository: {
+    name: string
+    path: string
+  }
+  year1: {
+    addedLines: number
+    deletedLines: number
+  }
+  year2: {
+    addedLines: number
+    deletedLines: number
+  }
+}
+
+const repositoryYearComparison = computed((): RepositoryYearComparison[] => {
+  if (!props.stats || !props.stats.yearComparison) {
+    return []
+  }
+
+  const year1 = props.stats.yearComparison.year1.year
+  const year2 = props.stats.yearComparison.year2.year
+
+  const year1Start = new Date(year1, 0, 1)
+  const year1End = new Date(year1, 11, 31, 23, 59, 59, 999)
+  const year2Start = new Date(year2, 0, 1)
+  const year2End = new Date(year2, 11, 31, 23, 59, 59, 999)
+
+  const result: RepositoryYearComparison[] = []
+
+  props.stats.repositories.forEach((repoStat) => {
+    // 过滤年份1的提交
+    const year1Commits = repoStat.commitsList.filter((commit) => {
+      const commitDate = new Date(commit.date)
+      return commitDate >= year1Start && commitDate <= year1End
+    })
+
+    // 过滤年份2的提交
+    const year2Commits = repoStat.commitsList.filter((commit) => {
+      const commitDate = new Date(commit.date)
+      return commitDate >= year2Start && commitDate <= year2End
+    })
+
+    // 如果两个年份都没有提交，跳过
+    if (year1Commits.length === 0 && year2Commits.length === 0) {
+      return
+    }
+
+    // 计算年份1的新增和删除代码行数
+    const year1AddedLines = year1Commits.reduce((sum, commit) => sum + (commit.addedLines || 0), 0)
+    const year1DeletedLines = year1Commits.reduce(
+      (sum, commit) => sum + (commit.deletedLines || 0),
+      0
+    )
+
+    // 计算年份2的新增和删除代码行数
+    const year2AddedLines = year2Commits.reduce((sum, commit) => sum + (commit.addedLines || 0), 0)
+    const year2DeletedLines = year2Commits.reduce(
+      (sum, commit) => sum + (commit.deletedLines || 0),
+      0
+    )
+
+    result.push({
+      repository: {
+        name: repoStat.repository.name,
+        path: repoStat.repository.path
+      },
+      year1: {
+        addedLines: year1AddedLines,
+        deletedLines: year1DeletedLines
+      },
+      year2: {
+        addedLines: year2AddedLines,
+        deletedLines: year2DeletedLines
+      }
+    })
+  })
+
+  // 按年份2的新增代码行数降序排序
+  return result.sort((a, b) => b.year2.addedLines - a.year2.addedLines)
+})
 
 const createDailyChart = (): void => {
   if (!dailyChartRef.value || !props.stats) return
@@ -823,5 +964,50 @@ onUnmounted(() => {
 
 .change-neutral {
   color: #656d76;
+}
+
+.repository-comparison-table-container {
+  margin-top: 32px;
+}
+
+.repository-comparison-title {
+  margin: 0 0 16px 0;
+  color: #24292f;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.repository-comparison-table {
+  font-size: 13px;
+}
+
+.repo-name-column {
+  width: 250px;
+  min-width: 200px;
+}
+
+.repo-name-cell {
+  padding: 12px 16px;
+  border-bottom: 1px solid #e1e4e8;
+}
+
+.repo-name {
+  font-weight: 500;
+  color: #24292f;
+  margin-bottom: 4px;
+}
+
+.repo-path-small {
+  font-size: 11px;
+  color: #656d76;
+  word-break: break-all;
+  line-height: 1.4;
+}
+
+.no-data {
+  text-align: center;
+  color: #656d76;
+  padding: 24px;
+  font-style: italic;
 }
 </style>

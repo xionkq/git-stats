@@ -218,15 +218,6 @@ onUnmounted(() => {
     <header class="header">
       <h1>📄 Git 多仓库可视化分析工具</h1>
       <div class="header-actions">
-        <div class="branch-input-group">
-          <input
-            v-model="branchName"
-            type="text"
-            placeholder="分支名（留空使用当前分支）"
-            class="branch-input"
-            :disabled="isScanning"
-          />
-        </div>
         <button :disabled="isScanning" class="btn-primary" @click="selectDirectory">
           {{ isScanning ? '扫描中...' : '选择目录' }}
         </button>
@@ -276,6 +267,13 @@ onUnmounted(() => {
           <div class="selected-count">已选择: {{ selectedRepos.length }} 个仓库</div>
         </div>
         <div class="footer-input-group">
+          <input
+            v-model="branchName"
+            type="text"
+            placeholder="分支名（留空使用当前分支）"
+            class="branch-input"
+            :disabled="isScanning"
+          />
           <input
             v-model="accountName"
             type="text"
@@ -339,11 +337,6 @@ body {
   gap: 16px;
 }
 
-.branch-input-group {
-  display: flex;
-  align-items: center;
-}
-
 .branch-input {
   padding: 8px 12px;
   border: 1px solid #d1d9e0;
@@ -352,7 +345,7 @@ body {
   color: #24292f;
   outline: none;
   transition: border-color 0.2s;
-  width: 200px;
+  width: 180px;
 }
 
 .branch-input:focus {
@@ -463,7 +456,7 @@ body {
   gap: 12px;
   align-items: center;
   flex: 1;
-  max-width: 500px;
+  max-width: 700px;
 }
 
 .account-input {
